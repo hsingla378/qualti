@@ -1,0 +1,42 @@
+# Dependencies
+node_modules
+
+#Package managers
+.pnpm-store
+
+# Build outputs
+dist
+.next
+out
+
+# Turborepo
+.turbo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# TypeScript
+*.tsbuildinfo
+
+# Testing
+coverage
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors (keep shared workspace settings)
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# Deploy
+.vercel
+

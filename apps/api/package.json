@@ -1,0 +1,26 @@
+{
+  "name": "@qualti/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.14.4",
+    "@qualti/db": "workspace:*",
+    "@qualti/types": "workspace:*",
+    "hono": "^4.8.3"
+  },
+  "devDependencies": {
+    "@qualti/config": "workspace:*",
+    "@types/node": "^22.15.32",
+    "eslint": "^10.4.1",
+    "tsx": "^4.20.3",
+    "typescript": "^6.0.3"
+  }
+}
