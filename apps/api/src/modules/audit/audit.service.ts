@@ -1,0 +1,46 @@
+import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
+
+type RecordAuditEventInput = {
+  organizationId: string;
+  actorId?: string;
+  action: string;
+  entityType: string;
+  entityId?: string;
+  metadata?: Prisma.InputJsonValue;
+};
+
+@Injectable()
+export class AuditService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  record(input: RecordAuditEventInput) {
+    return this.prisma.auditEvent.create({
+      data: {
+        organizationId: input.organizationId,
+        actorId: input.actorId,
+        action: input.action,
+        entityType: input.entityType,
+        entityId: input.entityId,
+        metadata: input.metadata,
+      },
+    });
+  }
+
+  findAll(organizationId: string) {
+    return this.prisma.auditEvent.findMany({
+      where: { organizationId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        actor: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+  }
+}
