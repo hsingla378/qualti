@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { AuditService } from '../audit/audit.service';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
@@ -37,6 +38,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly auditService: AuditService,
   ) {}
 
   async register(dto: RegisterDto): Promise<SignedAuthSession> {
@@ -85,6 +87,18 @@ export class AuthService {
         organization,
         membership,
       };
+    });
+
+    await this.auditService.record({
+      organizationId: result.organization.id,
+      actorId: result.user.id,
+      action: 'organization.created',
+      entityType: 'organization',
+      entityId: result.organization.id,
+      metadata: {
+        name: result.organization.name,
+        slug: result.organization.slug,
+      },
     });
 
     return this.signSession({
@@ -137,6 +151,17 @@ export class AuthService {
         'User does not belong to an organization',
       );
     }
+
+    await this.auditService.record({
+      organizationId: membership.organization.id,
+      actorId: user.id,
+      action: 'user.logged_in',
+      entityType: 'user',
+      entityId: user.id,
+      metadata: {
+        email: user.email,
+      },
+    });
 
     return this.signSession({
       user: {

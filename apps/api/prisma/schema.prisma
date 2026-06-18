@@ -56,6 +56,7 @@ model Site {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([organizationId])
+  @@unique([id, organizationId])
 }
 
 model AuditEvent {

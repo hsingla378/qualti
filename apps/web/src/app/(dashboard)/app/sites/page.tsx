@@ -1,68 +1,216 @@
-import { MapPin, Plus } from "lucide-react"
+'use client';
 
-import { sites } from "@/lib/mock-data"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { PageHeader } from "@/components/ui/page-header"
+import { MapPin, Pencil, Plus, RefreshCcw, Trash2, X } from 'lucide-react';
+import { useState } from 'react';
+
+import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeader } from '@/components/ui/page-header';
+import { useAuth } from '@/features/auth/hooks';
+import type { Site } from '@/features/sites/api';
+import { SiteForm } from '@/features/sites/site-form';
+import { useCreateSite, useDeleteSite, useSites, useUpdateSite } from '@/features/sites/hooks';
 
 export default function SitesPage() {
+  const { organization } = useAuth();
+  const organizationId = organization?.id;
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editingSite, setEditingSite] = useState<Site | null>(null);
+
+  const sitesQuery = useSites(organizationId);
+  const createSite = useCreateSite(organizationId ?? '');
+  const updateSite = useUpdateSite(organizationId ?? '');
+  const deleteSite = useDeleteSite(organizationId ?? '');
+
+  const sites = sitesQuery.data ?? [];
+
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Sites"
-        description="Manage inspection locations across your organization."
-      >
-        <Button>
+      <PageHeader title="Sites" description="Manage inspection locations across your organization.">
+        <Button onClick={() => setCreateOpen(true)}>
           <Plus className="size-4" />
           Add site
         </Button>
       </PageHeader>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {sites.map((site) => (
-          <Card key={site.id} className="transition-shadow hover:shadow-md">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
-                    <MapPin className="size-5 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base">{site.name}</CardTitle>
-                    <CardDescription>{site.location}</CardDescription>
-                  </div>
-                </div>
-                <Badge variant={site.status === "active" ? "success" : "secondary"}>
-                  {site.status}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-4 border-t pt-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">Type</p>
-                  <p className="text-sm font-medium">{site.type}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Inspections</p>
-                  <p className="text-sm font-medium">{site.inspectionsCount}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Open issues</p>
-                  <p className="text-sm font-medium">{site.openIssues}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      {sitesQuery.isLoading ? (
+        <SitesLoadingState />
+      ) : sitesQuery.isError ? (
+        <SitesErrorState onRetry={() => void sitesQuery.refetch()} />
+      ) : sites.length === 0 ? (
+        <EmptyState
+          icon={MapPin}
+          title="No sites yet"
+          description="Create your first site so inspections can be organized by location."
+          actionLabel="Add site"
+          onAction={() => setCreateOpen(true)}
+        />
+      ) : (
+        <div className="overflow-hidden rounded-lg border bg-background">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b bg-muted/60 text-xs uppercase text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3 font-medium">Name</th>
+                <th className="px-4 py-3 font-medium">Code</th>
+                <th className="px-4 py-3 font-medium">Location</th>
+                <th className="px-4 py-3 font-medium">Created</th>
+                <th className="px-4 py-3 text-right font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sites.map((site) => (
+                <tr key={site.id} className="border-b last:border-0">
+                  <td className="px-4 py-3 font-medium">{site.name}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{site.code || '—'}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{site.location || '—'}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{formatDate(site.createdAt)}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        aria-label={`Edit ${site.name}`}
+                        onClick={() => setEditingSite(site)}
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        aria-label={`Delete ${site.name}`}
+                        disabled={deleteSite.isPending}
+                        onClick={() => deleteSite.mutate(site.id)}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <SiteModal title="Create site" open={createOpen} onClose={() => setCreateOpen(false)}>
+        <SiteForm
+          submitLabel="Create site"
+          isSubmitting={createSite.isPending}
+          onSubmit={(input) => {
+            createSite.mutate(input, {
+              onSuccess: () => setCreateOpen(false),
+            });
+          }}
+        />
+        {createSite.error ? <MutationError error={createSite.error} /> : null}
+      </SiteModal>
+
+      <SiteModal title="Edit site" open={Boolean(editingSite)} onClose={() => setEditingSite(null)}>
+        {editingSite ? (
+          <>
+            <SiteForm
+              submitLabel="Save changes"
+              isSubmitting={updateSite.isPending}
+              initialValues={{
+                name: editingSite.name,
+                code: editingSite.code ?? '',
+                location: editingSite.location ?? '',
+              }}
+              onSubmit={(input) => {
+                updateSite.mutate(
+                  {
+                    siteId: editingSite.id,
+                    input,
+                  },
+                  {
+                    onSuccess: () => setEditingSite(null),
+                  },
+                );
+              }}
+            />
+            {updateSite.error ? <MutationError error={updateSite.error} /> : null}
+          </>
+        ) : null}
+      </SiteModal>
+    </div>
+  );
+}
+
+function SitesLoadingState() {
+  return (
+    <div className="overflow-hidden rounded-lg border bg-background">
+      <div className="space-y-3 p-4">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <div key={index} className="h-10 animate-pulse rounded-md bg-muted" />
         ))}
       </div>
     </div>
-  )
+  );
+}
+
+function SitesErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h2 className="text-sm font-medium text-destructive">Sites could not be loaded</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Try again. If it keeps failing, check that the API server is running.
+          </p>
+        </div>
+        <Button variant="outline" onClick={onRetry}>
+          <RefreshCcw className="size-4" />
+          Retry
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function SiteModal({
+  title,
+  open,
+  onClose,
+  children,
+}: {
+  title: string;
+  open: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  if (!open) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="site-modal-title"
+        className="w-full max-w-md rounded-lg border bg-background p-5 shadow-lg"
+      >
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <h2 id="site-modal-title" className="text-lg font-semibold">
+            {title}
+          </h2>
+          <Button variant="ghost" size="icon" aria-label="Close" onClick={onClose}>
+            <X className="size-4" />
+          </Button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function MutationError({ error }: { error: Error }) {
+  return <p className="mt-3 text-sm text-destructive">{error.message}</p>;
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat('en-IN', {
+    dateStyle: 'medium',
+  }).format(new Date(value));
 }

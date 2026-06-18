@@ -14,9 +14,10 @@ import { OrganizationContextGuard } from '../../common/guards/organization-conte
 import { CreateSiteDto } from './dto/create-site.dto';
 import { UpdateSiteDto } from './dto/update-site.dto';
 import { SitesService } from './sites.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('sites')
-@UseGuards(OrganizationContextGuard)
+@UseGuards(JwtAuthGuard, OrganizationContextGuard)
 export class SitesController {
   constructor(private readonly sitesService: SitesService) {}
 
@@ -30,7 +31,7 @@ export class SitesController {
     @CurrentOrganization() organization: OrganizationContext,
     @Body() dto: CreateSiteDto,
   ) {
-    return this.sitesService.create(organization.id, dto);
+    return this.sitesService.create(organization.id, dto, organization.userId);
   }
 
   @Patch(':id')
@@ -39,7 +40,12 @@ export class SitesController {
     @Param('id') id: string,
     @Body() dto: UpdateSiteDto,
   ) {
-    return this.sitesService.update(organization.id, id, dto);
+    return this.sitesService.update(
+      organization.id,
+      id,
+      dto,
+      organization.userId,
+    );
   }
 
   @Delete(':id')
@@ -47,6 +53,6 @@ export class SitesController {
     @CurrentOrganization() organization: OrganizationContext,
     @Param('id') id: string,
   ) {
-    return this.sitesService.remove(organization.id, id);
+    return this.sitesService.remove(organization.id, id, organization.userId);
   }
 }

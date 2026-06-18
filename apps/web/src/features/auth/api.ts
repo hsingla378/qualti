@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+import { apiRequest } from '@/lib/api-client';
 
 export type AuthUser = {
   id: string;
@@ -30,47 +30,29 @@ export type RegisterInput = {
   companyName: string;
 };
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
-    ...init,
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...init?.headers,
-    },
-  });
-
-  if (!response.ok) {
-    const body = await response.json().catch(() => null);
-    throw new Error(body?.message ?? 'Something went wrong');
-  }
-
-  return response.json() as Promise<T>;
-}
-
 export function login(input: LoginInput) {
-  return request<AuthSession>('/auth/login', {
+  return apiRequest<AuthSession>('/auth/login', {
     method: 'POST',
     body: JSON.stringify(input),
   });
 }
 
 export function register(input: RegisterInput) {
-  return request<AuthSession>('/auth/register', {
+  return apiRequest<AuthSession>('/auth/register', {
     method: 'POST',
     body: JSON.stringify(input),
   });
 }
 
 export function logout() {
-  return request<{ success: true }>('/auth/logout', {
+  return apiRequest<{ success: true }>('/auth/logout', {
     method: 'POST',
   });
 }
 
 export async function getCurrentSession() {
   try {
-    return await request<AuthSession>('/auth/me');
+    return await apiRequest<AuthSession>('/auth/me');
   } catch {
     return null;
   }

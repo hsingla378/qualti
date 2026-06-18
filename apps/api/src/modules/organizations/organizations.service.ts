@@ -30,4 +30,37 @@ export class OrganizationsService {
       },
     });
   }
+
+  async findMembershipContext(userId: string, organizationId?: string) {
+    const membership = await this.prisma.membership.findFirst({
+      where: {
+        userId,
+        ...(organizationId ? { organizationId } : {}),
+      },
+      include: {
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+
+    if (!membership) {
+      return null;
+    }
+
+    return {
+      id: membership.organization.id,
+      name: membership.organization.name,
+      slug: membership.organization.slug,
+      role: membership.role,
+      userId: membership.userId,
+    };
+  }
 }

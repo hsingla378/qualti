@@ -65,7 +65,12 @@ export class SitesService {
     const existing = await this.findOne(organizationId, id);
 
     const site = await this.prisma.site.update({
-      where: { id: existing.id },
+      where: {
+        id_organizationId: {
+          id: existing.id,
+          organizationId,
+        },
+      },
       data: dto,
     });
 
@@ -96,7 +101,12 @@ export class SitesService {
     const existing = await this.findOne(organizationId, id);
 
     await this.prisma.site.delete({
-      where: { id: existing.id },
+      where: {
+        id_organizationId: {
+          id: existing.id,
+          organizationId,
+        },
+      },
     });
 
     await this.auditService.record({

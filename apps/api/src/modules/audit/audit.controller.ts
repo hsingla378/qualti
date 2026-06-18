@@ -3,9 +3,10 @@ import { CurrentOrganization } from '../../common/decorators/current-organizatio
 import type { OrganizationContext } from '../../common/decorators/current-organization.decorator';
 import { OrganizationContextGuard } from '../../common/guards/organization-context.guard';
 import { AuditService } from './audit.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('audit-events')
-@UseGuards(OrganizationContextGuard)
+@UseGuards(JwtAuthGuard, OrganizationContextGuard)
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 
